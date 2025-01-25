@@ -20,6 +20,7 @@
 #define __ST7796Driver_T4_H_
 
 #include "Arduino.h"
+#include <Adafruit_GFX.h>  // Core graphics library
 #include "DMAChannel.h"
 #ifdef __cplusplus
 #include "./StatsVar.h"
@@ -211,7 +212,7 @@ typedef struct {
 
 
 
-class ST7796Driver : public Print
+class ST7796Driver : public GFXcanvas16
 {
 
  public:
@@ -232,23 +233,19 @@ class ST7796Driver : public Print
   uint16_t* volatile _fb1;                    // first internal framebuffer
   ST7796_T4::DiffBuffBase* volatile _ongoingDiff;        // should be nullptr when mirror_fb = true.
 
-  ST7796Driver(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t RST = -1);
+  ST7796Driver(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t RST = -1,uint16_t s_width=320,uint16_t s_height=480);
   ST7796Driver(uint8_t CS, uint8_t RS, uint8_t RST = -1);
 
   void     init(void),
            setAddrWindow(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1),
-           pushColor(uint16_t color, boolean last_pixel=false),
-           fillScreen(uint16_t color),
-           drawPixel(int16_t x, int16_t y, uint16_t color),
-           drawFastVLine(int16_t x, int16_t y, int16_t h, uint16_t color),
-           drawFastHLine(int16_t x, int16_t y, int16_t w, uint16_t color),
-           fillRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
+           pushColor(uint16_t color, boolean last_pixel=false);
    inline void fillWindow(uint16_t color) {fillScreen(color);}
   virtual void setRotation(uint8_t r);
   void     invertDisplay(boolean i);
   void     setRowColStart(uint16_t x, uint16_t y);
   uint16_t  rowStart() {return _rowstart;}
   uint16_t  colStart() {return _colstart;}
+  void clearScreen();
 
   void setAddr(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
     __attribute__((always_inline)) {
@@ -261,7 +258,7 @@ class ST7796Driver : public Print
   }
   //changed
     void setDiffBuffers(ST7796_T4::DiffBuffBase* diff1, ST7796_T4::DiffBuffBase* diff2);
-    void updateScreenWithDiffs(const uint16_t* _new_fb);
+    void updateScreenWithDiffs();
     void _flush_cache(const void* ptr, size_t len) ST7796_T4_ALWAYS_INLINE
         {
         if ((uint32_t)ptr >= 0x20200000u) arm_dcache_flush((void*)ptr, len);
@@ -276,61 +273,7 @@ class ST7796Driver : public Print
 	int16_t height(void) const { return _height; }
 	uint8_t getRotation(void);
 	
-	void drawCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
-	void drawCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername, uint16_t color);
-	void fillCircle(int16_t x0, int16_t y0, int16_t r, uint16_t color);
-	void fillCircleHelper(int16_t x0, int16_t y0, int16_t r, uint8_t cornername, int16_t delta, uint16_t color);
-	void drawTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
-	void fillTriangle(int16_t x0, int16_t y0, int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
-	void drawRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h, int16_t radius, uint16_t color);
-	void fillRoundRect(int16_t x0, int16_t y0, int16_t w, int16_t h, int16_t radius, uint16_t color);
-	void drawBitmap(int16_t x, int16_t y, const uint8_t *bitmap, int16_t w, int16_t h, uint16_t color);
-	void drawLine(int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t color);
-	void drawRect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color);
-	void drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size_x, uint8_t size_y);
-	void inline drawChar(int16_t x, int16_t y, unsigned char c, uint16_t color, uint16_t bg, uint8_t size) 
-	    { drawChar(x, y, c, color, bg, size, size);}
-	
 	static const int16_t CENTER = 9998;
-	void setCursor(int16_t x, int16_t y, bool autoCenter=false);
-    void getCursor(int16_t *x, int16_t *y);
-	void setTextColor(uint16_t c);
-	void setTextColor(uint16_t c, uint16_t bg);
-    void setTextSize(uint8_t sx, uint8_t sy);
-	void inline setTextSize(uint8_t s) { setTextSize(s,s); }
-	uint8_t getTextSizeX();
-	uint8_t getTextSizeY();
-	uint8_t getTextSize();
-	void setTextWrap(boolean w);
-	boolean getTextWrap();
-	
-	//////
-	virtual size_t write(uint8_t);		
-	virtual size_t write(const uint8_t *buffer, size_t size);
-	int16_t getCursorX(void) const { return cursor_x; }
-	int16_t getCursorY(void) const { return cursor_y; }
-	void setFont(const ST7796_T4_font_t &f);
-    void setFont(const GFXfont *f = NULL);
-	void setFontAdafruit(void) { setFont(); }
-	void drawFontChar(unsigned int c);
-	void drawGFXFontChar(unsigned int c);
-
-    void getTextBounds(const uint8_t *buffer, uint16_t len, int16_t x, int16_t y,
-      int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
-    void getTextBounds(const char *string, int16_t x, int16_t y,
-      int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
-    void getTextBounds(const String &str, int16_t x, int16_t y,
-      int16_t *x1, int16_t *y1, uint16_t *w, uint16_t *h);
-	int16_t strPixelLen(const char * str);
-
-	// added support for drawing strings/numbers/floats with centering
-	// modified from tft_ili9341_ESP github library
-	// Handle numbers
-	int16_t  drawNumber(long long_num,int poX, int poY);
-	int16_t  drawFloat(float floatNumber,int decimal,int poX, int poY);   
-	// Handle char arrays
-	int16_t drawString(const String& string, int poX, int poY);
-	int16_t drawString1(char string[], int16_t len, int poX, int poY);
 
 	void setTextDatum(uint8_t datum);
 	
@@ -439,51 +382,26 @@ class ST7796Driver : public Print
 
 
 // Frame buffer support
-#ifdef ENABLE_ST77XX_FRAMEBUFFER
   enum {ST77XX_DMA_INIT=0x01, 
         ST77XX_DMA_EVER_INIT = 0x08,
         ST77XX_DMA_CONT=0x02, 
         ST77XX_DMA_FINISH=0x04,
         ST77XX_DMA_ACTIVE=0x80};
 
-  // added support to use optional Frame buffer
-  void  setFrameBuffer(uint16_t *frame_buffer);
-  uint8_t useFrameBuffer(boolean b);    // use the frame buffer?  First call will allocate
-  void  freeFrameBuffer(void);      // explicit call to release the buffer
   void  updateScreen(void);       // call to say update the screen now. 
   bool  updateScreenAsync(bool update_cont = false);  // call to say update the screen optinoally turn into continuous mode. 
   void  waitUpdateAsyncComplete(void);
   void  endUpdateAsync();      // Turn of the continueous mode fla
   void  dumpDMASettings();
-  uint16_t *getFrameBuffer() {return _pfbtft;}
+  uint16_t *getFrameBuffer() {return _fb1;}
   uint32_t frameCount() {return _dma_frame_count; }
   uint16_t subFrameCount() { return _dma_sub_frame_count; }
   boolean asyncUpdateActive(void)  {return (_dma_state & ST77XX_DMA_ACTIVE);}
   void  initDMASettings(void);
   void setFrameCompleteCB(void (*pcb)(), bool fCallAlsoHalfDone = false);
-  #else
-  // added support to use optional Frame buffer
-  void  setFrameBuffer(uint16_t *frame_buffer) {return;}
-  uint8_t useFrameBuffer(boolean b) {return 0;};    // use the frame buffer?  First call will allocate
-  void  freeFrameBuffer(void) {return;}      // explicit call to release the buffer
-  void  updateScreen(void) {return;}       // call to say update the screen now. 
-  bool  updateScreenAsync(bool update_cont = false) {return false;}  // call to say update the screen optinoally turn into continuous mode. 
-  void  waitUpdateAsyncComplete(void) {return;}
-  void  endUpdateAsync() {return;}      // Turn of the continueous mode fla
-  void  dumpDMASettings() {return;}
-
-  uint32_t frameCount() {return 0; }
-  uint16_t *getFrameBuffer() {return NULL;}
-  boolean asyncUpdateActive(void)  {return false;}
-  uint16_t subFrameCount() { return 0; }
-  void setFrameCompleteCB(void (*pcb)(), bool fCallAlsoHalfDone = false) {return;}
-
-  #endif
 
   void updateChangedAreasOnly(bool updateChangedOnly) {
-  #ifdef ENABLE_ST77XX_FRAMEBUFFER
     _updateChangedAreasOnly = updateChangedOnly;
-#endif
   }
 
 
@@ -726,11 +644,8 @@ class ST7796Driver : public Print
 #endif 
     
 
-#ifdef ENABLE_ST77XX_FRAMEBUFFER
     // Add support for optional frame buffer
-  uint16_t  *_pfbtft;           // Optional Frame buffer 
-  uint8_t   _use_fbtft;         // Are we in frame buffer mode?
-  uint16_t  *_we_allocated_buffer;      // We allocated the buffer; 
+  uint8_t skip_buffer;
   uint32_t  _count_pixels;       // How big is the display in total pixels...
   int16_t _changed_min_x, _changed_max_x, _changed_min_y, _changed_max_y;
   bool _updateChangedAreasOnly = false; // current default off,
@@ -784,20 +699,16 @@ class ST7796Driver : public Print
   static void dmaInterrupt1(void);
   static void dmaInterrupt2(void);
   void process_dma_interrupt(void);
-#endif
 
   void clearChangedRange() {
-  #ifdef ENABLE_ST77XX_FRAMEBUFFER
     _changed_min_x = 0x7fff;
     _changed_max_x = -1;
     _changed_min_y = 0x7fff;
     _changed_max_y = -1;
-   #endif 
   }
 
   void updateChangedRange(int16_t x, int16_t y, int16_t w, int16_t h)
       __attribute__((always_inline)) {
-    #ifdef ENABLE_ST77XX_FRAMEBUFFER
     if (x < _changed_min_x)
       _changed_min_x = x;
     if (y < _changed_min_y)
@@ -809,12 +720,10 @@ class ST7796Driver : public Print
     if (y > _changed_max_y)
       _changed_max_y = y;
     //if (Serial)Serial.printf("UCR(%d %d %d %d) min:%d %d max:%d %d\n", w, y, w, h, _changed_min_x, _changed_min_y, _changed_max_x, _changed_max_y);
-   #endif 
   }
 
   // could combine with above, but avoids the +-...
   void updateChangedRange(int16_t x, int16_t y) __attribute__((always_inline)) {
-    #ifdef ENABLE_ST77XX_FRAMEBUFFER
     if (x < _changed_min_x)
       _changed_min_x = x;
     if (y < _changed_min_y)
@@ -823,18 +732,15 @@ class ST7796Driver : public Print
       _changed_max_x = x;
     if (y > _changed_max_y)
       _changed_max_y = y;
-  #endif
   }
 
 	void HLine(int16_t x, int16_t y, int16_t w, uint16_t color)
 	  __attribute__((always_inline)) 
 	  {
-		#ifdef ENABLE_ST77XX_FRAMEBUFFER
-	  	if (_use_fbtft) {
+	  	if (!skip_buffer) {
 	  		drawFastHLine(x, y, w, color);
 	  		return;
 	  	}
-	  	#endif
 	    x+=_originx;
 	    y+=_originy;
 
@@ -852,12 +758,10 @@ class ST7796Driver : public Print
 	void VLine(int16_t x, int16_t y, int16_t h, uint16_t color)
 	  __attribute__((always_inline)) 
 	  {
-		#ifdef ENABLE_ST77XX_FRAMEBUFFER
-	  	if (_use_fbtft) {
+	  	if (!skip_buffer) {
 	  		drawFastVLine(x, y, h, color);
 	  		return;
 	  	}
-	  	#endif
 		x+=_originx;
 	    y+=_originy;
 
@@ -910,14 +814,12 @@ class ST7796Driver : public Print
 
 	  	if((x < _displayclipx1) ||(x >= _displayclipx2) || (y < _displayclipy1) || (y >= _displayclipy2)) return;
 
-		#ifdef ENABLE_ST77XX_FRAMEBUFFER
-	  	if (_use_fbtft) {
+	  	if (!skip_buffer) {
         updateChangedRange(x, y); // update the range of the screen that has been changed;
         int pixel_index = (int)y*(int)_width + x;
-	  		_pfbtft[pixel_index] = color;
+	  		_fb1[pixel_index] = color;
 	  		return;
 	  	}
-	  	#endif
 		setAddr(x, y, x, y);
 		writecommand(ST7735_RAMWR);
 		writedata16(color);
